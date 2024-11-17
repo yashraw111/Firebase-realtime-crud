@@ -35,6 +35,8 @@ You'll receive a toast notification confirming the update.
 Click the Delete button to remove a user.
 A confirmation prompt will appear before deleting the user.
 
+Live Here = (https://firebase-realtime-crud.vercel.app/)
+
 📸 Screenshots
 
 ![Create User Form ](./src/assets/images/Create-View.png)
