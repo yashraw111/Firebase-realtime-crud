@@ -16,7 +16,6 @@ const SingleUser = () => {
   useEffect(() => {
     Single();
   }, []);
-
   return (
     <>
       <h1 className="text-center my-5 text-primary">View User Details</h1>

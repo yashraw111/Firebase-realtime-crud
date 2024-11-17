@@ -1,99 +1,180 @@
-import { get, ref, set } from "firebase/database";
-import React, { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import db from "../../Firebase";
+import { get, push, ref, remove, set } from "firebase/database";
+import { useForm } from "react-hook-form";
+import { NavLink } from "react-router-dom";
 import { Bounce, ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const Update = () => {
-  const { register, handleSubmit, reset } = useForm();
-  const { id } = useParams();
-  const redirect = useNavigate();
-  async function single() {
-    const single_User = await get(ref(db, `firebase/${id}`));
-    console.log(single_User.val());
-    reset(single_User.val());
-  }
+const Create = () => {
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
+  const [users, setUser] = useState([]);
 
-  useEffect(() => {
-    single();
-  }, []);
-
-  async function SubmitData(data) {
-    await set(ref(db, `firebase/${id}`), data)
+  function SubmitData(data) {
+    set(push(ref(db, "firebase")), data)
       .then(() => {
-        toast.success("🦄 Data Updated!", {
+        showFirebase();
+        reset();
+        toast.success("🦄 Data Submitted!", {
           position: "top-center",
-          autoClose: 2000,
+          autoClose: 3000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
-          progress: 0,
-          theme: "dark",
+          theme: "colored",
           transition: Bounce,
         });
-
-        setTimeout(() => {
-          redirect("/");
-        }, 2000);
       })
-      .catch((err) => {
-        console.log(err);
+      .catch((error) => {
+        console.error(error);
       });
+  }
+
+  async function showFirebase() {
+    const res = await get(ref(db, "firebase"));
+    const obj = res.val();
+    const arr = [];
+
+    for (const key in obj) {
+      const User = obj[key];
+      const newUser = {
+        id: key,
+        ...User,
+      };
+      arr.push(newUser);
+    }
+    setUser(arr);
+  }
+
+  useEffect(() => {
+    showFirebase();
+  }, []);
+
+  async function trash(id) {
+    if (window.confirm("Do you want to delete this data?")) {
+      const single_User = ref(db, `firebase/${id}`);
+      await remove(single_User);
+      showFirebase();
+      toast.error("🗑️ Data Deleted!", {
+        position: "top-center",
+        autoClose: 2000,
+        theme: "colored",
+      });
+    }
   }
 
   return (
     <>
-      <h2 className="text-center text-primary my-4">Update User Information</h2>
       <form
         onSubmit={handleSubmit(SubmitData)}
-        className="col-10 col-md-6 mx-auto p-5 shadow-lg rounded bg-light"
+        className="col-10 col-md-6 mx-auto p-5 shadow-lg rounded bg-light my-5"
       >
-        <div className="mb-4">
-          <label htmlFor="username" className="form-label">
-            Username
-          </label>
+        <h3 className="text-center text-primary">User Management</h3>
+        <div className="form-group mt-4">
+          <label className="form-label">Username</label>
           <input
             type="text"
-            id="username"
             placeholder="Enter Username"
             className="form-control"
-            {...register("username")}
+            {...register("username", { required: "Username is required" })}
           />
+          {errors.username && (
+            <span className="text-danger">{errors.username.message}</span>
+          )}
         </div>
-        <div className="mb-4">
-          <label htmlFor="email" className="form-label">
-            Email
-          </label>
+        <div className="form-group mt-4">
+          <label className="form-label">Email</label>
           <input
             type="email"
-            id="email"
             placeholder="Enter Email"
             className="form-control"
-            {...register("email")}
+            {...register("email", {
+              required: "Email is required",
+              pattern: {
+                value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/,
+                message: "Invalid email address",
+              },
+            })}
           />
+          {errors.email && (
+            <span className="text-danger">{errors.email.message}</span>
+          )}
         </div>
-        <div className="mb-4">
-          <label htmlFor="mobile" className="form-label">
-            Mobile
-          </label>
+        <div className="form-group mt-4">
+          <label className="form-label">Mobile</label>
           <input
             type="tel"
-            id="mobile"
-            placeholder="Enter Mobile Number"
+            placeholder="Enter Mobile"
             className="form-control"
-            {...register("mobile")}
+            {...register("mobile", {
+              required: "Mobile number is required",
+              pattern: {
+                value: /^[0-9]{10}$/,
+                message: "Mobile number should be 10 digits",
+              },
+            })}
           />
+          {errors.mobile && (
+            <span className="text-danger">{errors.mobile.message}</span>
+          )}
         </div>
-        <button type="submit" className="btn btn-success w-100 py-2">
-          Update
-        </button>
+        <button className="btn btn-success w-100 mt-4">Submit</button>
       </form>
+
+      <div className="container my-5">
+        <h3 className="text-center text-secondary">Users List</h3>
+        <table className="table table-responsive table-striped table-hover shadow-sm rounded mt-4">
+          <thead className="table-primary">
+            <tr>
+              <th>S.No</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Mobile</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((User, index) => (
+              <tr key={User.id}>
+                <td>{index + 1}</td>
+                <td>{User.username}</td>
+                <td>{User.email}</td>
+                <td>{User.mobile}</td>
+                <td>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => trash(User.id)}
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+                  <NavLink
+                    className="btn btn-primary btn-sm mx-2"
+                    to={`/user/${User.id}`}
+                  >
+                    <i className="fa-solid fa-eye"></i>
+                  </NavLink>
+                  <NavLink
+                    className="btn btn-warning btn-sm"
+                    to={`/update/${User.id}`}
+                  >
+                    <i className="fa-regular fa-pen-to-square"></i>
+                  </NavLink>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <ToastContainer />
     </>
   );
 };
 
-export default Update;
+export default Create;
